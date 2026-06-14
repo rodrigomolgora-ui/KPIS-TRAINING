@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KPIs Training · Summary Nuevos Ingresos</title>
+<style>
+  :root{
+    --bg:#f4f4f1; --card:#fff; --ink:#2c2c2a; --ink2:#5f5e5a; --ink3:#8a8980;
+    --line:#e6e5df; --line2:#d3d1c7; --dark:#1f1f1f; --yellow:#ffe600;
+    --g-bg:#7DC8A0; --g-tx:#0c3a28; --a-bg:#F8E08E; --a-tx:#5c4708; --r-bg:#E8857F; --r-tx:#4d1310; --gray:#e9e9e6;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--bg); color:var(--ink); font-family:'Segoe UI',Roboto,Arial,sans-serif;}
+  .wrap{max-width:1120px; margin:0 auto; padding:20px;}
+  .titlebar{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; margin-bottom:18px;}
+  .titlebar h1{font-size:22px; font-weight:800; margin:0; background:var(--yellow); padding:10px 18px; border-radius:8px; letter-spacing:.5px;}
+  .filters{display:flex; gap:10px;}
+  .filters label{display:flex; flex-direction:column; font-size:11px; color:var(--ink2); gap:3px;}
+  select{font-family:inherit; font-size:13px; padding:7px 10px; border:1px solid var(--line2); border-radius:8px; background:var(--card); color:var(--ink); min-width:130px;}
+  .cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:16px;}
+  .kc{background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px 16px;}
+  .kc .lbl{font-size:12px; color:var(--ink2); text-transform:uppercase; letter-spacing:.3px;}
+  .kc .val{font-size:26px; font-weight:700; margin-top:3px;}
+  .legend{font-size:11px; color:var(--ink3); line-height:1.6; margin:0 0 14px;}
+  .tablecard{background:var(--card); border:1px solid var(--line); border-radius:10px; padding:0; overflow:hidden;}
+  .tablescroll{overflow-x:auto;}
+  table{width:100%; border-collapse:collapse; font-size:12.5px; min-width:840px;}
+  thead th{background:var(--dark); color:#fff; padding:11px 8px; font-weight:700; font-size:11.5px; text-align:center; letter-spacing:.3px;}
+  thead th.l{text-align:left;}
+  tbody td{padding:0; text-align:center; border-bottom:1px solid var(--line);}
+  tbody td .cell{padding:9px 8px; height:100%;}
+  tbody td.l .cell{text-align:left; font-weight:600;}
+  tbody td.idx .cell, tbody td.n .cell{color:var(--ink2);}
+  .frac{display:block; font-size:9px; opacity:.7; font-weight:400;}
+  tfoot td{padding:11px 8px; font-weight:800; background:#fafaf8; border-top:2px solid var(--line2); text-align:center;}
+  tfoot td.l{text-align:left;}
+  .nd{color:var(--ink3);}
+  .empty{padding:30px; text-align:center; color:var(--ink3); font-size:14px;}
+  footer{margin-top:18px; font-size:11px; color:var(--ink3); text-align:center;}
+  .podium-title{margin:22px 0 4px; font-size:15px; font-weight:800;}
+  .podium-sub{margin:0 0 12px; font-size:12px; color:var(--ink3);}
+  .trend-ctrl{margin-bottom:10px;}
+  .trend-ctrl label{display:flex; flex-direction:column; font-size:11px; color:var(--ink2); gap:3px; max-width:240px;}
+  table.trendtbl{min-width:560px;}
+  .spark{vertical-align:middle;}
+  .barlegend{font-size:11px; color:var(--ink3); margin-top:10px; line-height:1.5;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="titlebar">
+    <h1>KPIS TRAINING · WORK SAMPLE</h1>
+    <div class="filters">
+      <label>WAREHOUSE<select id="wh"></select></label>
+      <label>WEAK<select id="wk"></select></label>
+    </div>
+  </div>
+
+  <div class="cards" id="cards"></div>
+
+  <p class="legend">Semáforo contra target — TTFB ≤1.2/≤2/&gt;2 · %TTFB Día1 ≥90/≥70/&lt;70 · Días rampeo ≤5/≤6/&gt;6 · %Turnover &lt;15/≤25/&gt;25 · Días turnover &gt;12/8–12/&lt;8 (invertido) · Días aprendizaje ≤5/≤7/&gt;7 · %Certificación ≥80/≥60/&lt;60. Días redondeados; el color usa el valor real.</p>
+
+  <div class="tablecard">
+    <div class="tablescroll">
+      <table>
+        <thead><tr id="head"></tr></thead>
+        <tbody id="body"></tbody>
+        <tfoot><tr id="foot"></tr></tfoot>
+      </table>
+    </div>
+  </div>
+  <h2 class="podium-title">Tendencia · últimas 4 semanas (W13–W16)</h2>
+  <p class="podium-sub">Cada sitio con sus 4 semanas en barras, para distinguir un foco rojo puntual de uno constante. Elige el indicador; si filtras un almacén arriba, se acota a ese sitio.</p>
+  <div class="trend-ctrl"><label>INDICADOR<select id="ind"></select></label></div>
+  <div class="tablecard" style="padding:14px 16px;"><div class="tablescroll"><div id="barchart"></div></div><div class="barlegend" id="barlegend"></div></div>
+
+  <footer>Prototipo HTML · réplica del summary de Looker Studio · filtra por almacén y semana de ingreso.</footer>
+</div>
+<script>
+const D={"weeks":["W10","W11","W12","W13","W14","W15","W16"],"data":{"ALL":{"rows":[{"n":43,"ttfb":10.84,"t_d1":0,"t_tot":37,"rampeo":4.54,"turnp":7.0,"turnd":21.7,"learn":1.98,"cert":90.7,"sitio":"TRAINING01"},{"n":835,"ttfb":1.2,"t_d1":762,"t_tot":823,"rampeo":3.86,"turnp":25.5,"turnd":11.8,"learn":4.15,"cert":70.3,"sitio":"TRAINING02"},{"n":480,"ttfb":2.96,"t_d1":169,"t_tot":272,"rampeo":4.48,"turnp":13.5,"turnd":12.6,"learn":8.41,"cert":32.5,"sitio":"TRAINING03"},{"n":492,"ttfb":1.08,"t_d1":472,"t_tot":491,"rampeo":4.08,"turnp":25.2,"turnd":14.3,"learn":3.64,"cert":72.8,"sitio":"TRAINING04"},{"n":122,"ttfb":1.02,"t_d1":118,"t_tot":120,"rampeo":6.2,"turnp":25.4,"turnd":9.9,"learn":4.82,"cert":35.2,"sitio":"TRAINING05"},{"n":956,"ttfb":1.24,"t_d1":840,"t_tot":948,"rampeo":4.59,"turnp":24.9,"turnd":14.9,"learn":6.14,"cert":67.3,"sitio":"TRAINING06"},{"n":971,"ttfb":1.11,"t_d1":860,"t_tot":926,"rampeo":6.26,"turnp":19.6,"turnd":12.4,"learn":6.75,"cert":58.3,"sitio":"TRAINING07"},{"n":63,"ttfb":1.02,"t_d1":46,"t_tot":47,"rampeo":5.18,"turnp":6.3,"turnd":11.0,"learn":3.38,"cert":69.8,"sitio":"TRAINING08"},{"n":56,"ttfb":1.95,"t_d1":21,"t_tot":40,"rampeo":3.53,"turnp":16.1,"turnd":15.8,"learn":4.71,"cert":55.4,"sitio":"TRAINING09"},{"n":227,"ttfb":1.02,"t_d1":222,"t_tot":227,"rampeo":3.46,"turnp":17.2,"turnd":13.8,"learn":1.97,"cert":66.1,"sitio":"TRAINING10"},{"n":407,"ttfb":1.02,"t_d1":400,"t_tot":404,"rampeo":3.8,"turnp":25.3,"turnd":13.4,"learn":3.23,"cert":57.2,"sitio":"TRAINING11"},{"n":48,"ttfb":1.02,"t_d1":47,"t_tot":48,"rampeo":2.16,"turnp":12.5,"turnd":5.0,"learn":8.63,"cert":89.6,"sitio":"TRAINING12"},{"n":666,"ttfb":1.21,"t_d1":611,"t_tot":659,"rampeo":4.04,"turnp":19.2,"turnd":12.8,"learn":5.29,"cert":67.7,"sitio":"TRAINING13"},{"n":11,"ttfb":1.8,"t_d1":3,"t_tot":10,"rampeo":4.5,"turnp":27.3,"turnd":5.7,"learn":1.52,"cert":81.8,"sitio":"TRAINING14"},{"n":17,"ttfb":1.0,"t_d1":17,"t_tot":17,"rampeo":5.51,"turnp":11.8,"turnd":18.0,"learn":3.47,"cert":52.9,"sitio":"TRAINING15"},{"n":22,"ttfb":4.41,"t_d1":10,"t_tot":22,"rampeo":null,"turnp":0.0,"turnd":null,"learn":19.25,"cert":0.0,"sitio":"TRAINING16"},{"n":6,"ttfb":6.0,"t_d1":0,"t_tot":6,"rampeo":5.48,"turnp":16.7,"turnd":12.0,"learn":5.07,"cert":50.0,"sitio":"TRAINING17"}],"tot":{"n":5422,"ttfb":1.34,"t_d1":4598,"t_tot":5097,"rampeo":4.5,"turnp":21.4,"turnd":13.1,"learn":5.74,"cert":62.1}},"W10":{"rows":[{"n":46,"ttfb":1.0,"t_d1":46,"t_tot":46,"rampeo":3.74,"turnp":37.0,"turnd":18.8,"learn":4.39,"cert":87.0,"sitio":"TRAINING02"},{"n":46,"ttfb":10.06,"t_d1":0,"t_tot":18,"rampeo":11.61,"turnp":17.4,"turnd":25.1,"learn":28.18,"cert":28.3,"sitio":"TRAINING03"},{"n":121,"ttfb":1.07,"t_d1":119,"t_tot":121,"rampeo":4.45,"turnp":33.1,"turnd":17.3,"learn":6.76,"cert":76.0,"sitio":"TRAINING04"},{"n":117,"ttfb":1.72,"t_d1":95,"t_tot":116,"rampeo":5.66,"turnp":38.5,"turnd":17.6,"learn":10.76,"cert":62.4,"sitio":"TRAINING06"},{"n":73,"ttfb":1.0,"t_d1":73,"t_tot":73,"rampeo":4.58,"turnp":35.6,"turnd":17.6,"learn":9.87,"cert":75.3,"sitio":"TRAINING07"},{"n":16,"ttfb":3.0,"t_d1":6,"t_tot":12,"rampeo":5.01,"turnp":18.8,"turnd":19.7,"learn":11.25,"cert":68.8,"sitio":"TRAINING09"},{"n":28,"ttfb":1.0,"t_d1":28,"t_tot":28,"rampeo":7.38,"turnp":50.0,"turnd":13.8,"learn":5.16,"cert":53.6,"sitio":"TRAINING11"},{"n":108,"ttfb":1.7,"t_d1":78,"t_tot":105,"rampeo":4.07,"turnp":34.3,"turnd":14.3,"learn":6.74,"cert":79.6,"sitio":"TRAINING13"},{"n":12,"ttfb":7.25,"t_d1":0,"t_tot":12,"rampeo":null,"turnp":0.0,"turnd":null,"learn":26.79,"cert":0.0,"sitio":"TRAINING16"}],"tot":{"n":567,"ttfb":1.8,"t_d1":445,"t_tot":531,"rampeo":4.96,"turnp":33.5,"turnd":17.0,"learn":12.91,"cert":67.9}},"W11":{"rows":[{"n":15,"ttfb":14.6,"t_d1":0,"t_tot":10,"rampeo":4.61,"turnp":6.7,"turnd":28.0,"learn":1.08,"cert":93.3,"sitio":"TRAINING01"},{"n":66,"ttfb":1.0,"t_d1":65,"t_tot":65,"rampeo":5.31,"turnp":42.4,"turnd":15.8,"learn":3.97,"cert":80.3,"sitio":"TRAINING02"},{"n":24,"ttfb":1.0,"t_d1":24,"t_tot":24,"rampeo":3.89,"turnp":33.3,"turnd":21.1,"learn":11.83,"cert":75.0,"sitio":"TRAINING04"},{"n":178,"ttfb":1.1,"t_d1":166,"t_tot":177,"rampeo":5.91,"turnp":41.6,"turnd":15.3,"learn":8.51,"cert":58.4,"sitio":"TRAINING06"},{"n":62,"ttfb":1.0,"t_d1":62,"t_tot":62,"rampeo":6.7,"turnp":25.8,"turnd":15.9,"learn":13.46,"cert":69.4,"sitio":"TRAINING07"},{"n":2,"ttfb":1.0,"t_d1":2,"t_tot":2,"rampeo":2.57,"turnp":0.0,"turnd":null,"learn":null,"cert":100.0,"sitio":"TRAINING09"},{"n":41,"ttfb":1.02,"t_d1":40,"t_tot":41,"rampeo":4.87,"turnp":41.5,"turnd":16.9,"learn":3.27,"cert":78.0,"sitio":"TRAINING10"},{"n":50,"ttfb":1.0,"t_d1":50,"t_tot":50,"rampeo":5.37,"turnp":54.0,"turnd":17.0,"learn":7.79,"cert":56.0,"sitio":"TRAINING11"},{"n":6,"ttfb":1.0,"t_d1":6,"t_tot":6,"rampeo":0.68,"turnp":16.7,"turnd":10.0,"learn":null,"cert":100.0,"sitio":"TRAINING12"},{"n":103,"ttfb":1.05,"t_d1":98,"t_tot":101,"rampeo":5.16,"turnp":35.9,"turnd":13.4,"learn":8.64,"cert":67.0,"sitio":"TRAINING13"},{"n":11,"ttfb":1.0,"t_d1":11,"t_tot":11,"rampeo":5.51,"turnp":18.2,"turnd":18.0,"learn":12.85,"cert":81.8,"sitio":"TRAINING15"}],"tot":{"n":558,"ttfb":1.29,"t_d1":524,"t_tot":549,"rampeo":5.4,"turnp":37.8,"turnd":15.7,"learn":8.44,"cert":67.7}},"W12":{"rows":[{"n":26,"ttfb":9.84,"t_d1":0,"t_tot":25,"rampeo":4.63,"turnp":7.7,"turnd":18.5,"learn":2.28,"cert":88.5,"sitio":"TRAINING01"},{"n":77,"ttfb":1.2,"t_d1":69,"t_tot":74,"rampeo":3.56,"turnp":41.6,"turnd":11.4,"learn":2.49,"cert":72.7,"sitio":"TRAINING02"},{"n":49,"ttfb":5.84,"t_d1":24,"t_tot":43,"rampeo":6.52,"turnp":20.4,"turnd":13.1,"learn":12.03,"cert":67.3,"sitio":"TRAINING03"},{"n":65,"ttfb":1.06,"t_d1":63,"t_tot":64,"rampeo":3.65,"turnp":32.3,"turnd":13.5,"learn":2.2,"cert":80.0,"sitio":"TRAINING04"},{"n":5,"ttfb":1.0,"t_d1":4,"t_tot":4,"rampeo":null,"turnp":80.0,"turnd":6.0,"learn":4.42,"cert":0.0,"sitio":"TRAINING05"},{"n":111,"ttfb":1.02,"t_d1":110,"t_tot":111,"rampeo":6.36,"turnp":29.7,"turnd":15.9,"learn":7.07,"cert":72.1,"sitio":"TRAINING06"},{"n":239,"ttfb":1.12,"t_d1":226,"t_tot":239,"rampeo":8.01,"turnp":23.0,"turnd":13.3,"learn":11.77,"cert":61.1,"sitio":"TRAINING07"},{"n":21,"ttfb":1.0,"t_d1":13,"t_tot":13,"rampeo":3.04,"turnp":28.6,"turnd":13.8,"learn":6.58,"cert":61.9,"sitio":"TRAINING09"},{"n":17,"ttfb":1.0,"t_d1":17,"t_tot":17,"rampeo":3.63,"turnp":47.1,"turnd":15.2,"learn":0.25,"cert":88.2,"sitio":"TRAINING10"},{"n":70,"ttfb":1.1,"t_d1":67,"t_tot":70,"rampeo":3.39,"turnp":31.4,"turnd":13.5,"learn":3.84,"cert":75.7,"sitio":"TRAINING11"},{"n":88,"ttfb":1.07,"t_d1":85,"t_tot":86,"rampeo":4.1,"turnp":21.6,"turnd":13.8,"learn":1.46,"cert":92.0,"sitio":"TRAINING13"},{"n":5,"ttfb":1.5,"t_d1":3,"t_tot":4,"rampeo":4.12,"turnp":20.0,"turnd":0.0,"learn":1.54,"cert":80.0,"sitio":"TRAINING14"},{"n":1,"ttfb":1.0,"t_d1":1,"t_tot":1,"rampeo":null,"turnp":0.0,"turnd":null,"learn":18.39,"cert":0.0,"sitio":"TRAINING16"}],"tot":{"n":774,"ttfb":1.66,"t_d1":682,"t_tot":751,"rampeo":5.46,"turnp":27.5,"turnd":13.4,"learn":7.92,"cert":71.8}},"W13":{"rows":[{"n":225,"ttfb":1.56,"t_d1":172,"t_tot":219,"rampeo":5.12,"turnp":29.8,"turnd":11.2,"learn":5.48,"cert":65.3,"sitio":"TRAINING02"},{"n":113,"ttfb":1.36,"t_d1":53,"t_tot":58,"rampeo":2.81,"turnp":26.5,"turnd":11.3,"learn":10.68,"cert":44.2,"sitio":"TRAINING03"},{"n":135,"ttfb":1.21,"t_d1":119,"t_tot":135,"rampeo":4.49,"turnp":31.1,"turnd":12.0,"learn":2.19,"cert":77.0,"sitio":"TRAINING04"},{"n":35,"ttfb":1.0,"t_d1":35,"t_tot":35,"rampeo":8.57,"turnp":37.1,"turnd":11.8,"learn":6.77,"cert":48.6,"sitio":"TRAINING05"},{"n":277,"ttfb":1.38,"t_d1":207,"t_tot":272,"rampeo":4.6,"turnp":23.1,"turnd":13.9,"learn":5.72,"cert":76.2,"sitio":"TRAINING06"},{"n":221,"ttfb":1.17,"t_d1":195,"t_tot":220,"rampeo":7.78,"turnp":28.1,"turnd":10.6,"learn":8.02,"cert":55.2,"sitio":"TRAINING07"},{"n":20,"ttfb":1.05,"t_d1":19,"t_tot":20,"rampeo":5.35,"turnp":5.0,"turnd":18.0,"learn":10.21,"cert":95.0,"sitio":"TRAINING08"},{"n":42,"ttfb":1.05,"t_d1":41,"t_tot":42,"rampeo":3.87,"turnp":35.7,"turnd":12.3,"learn":1.98,"cert":85.7,"sitio":"TRAINING11"},{"n":22,"ttfb":1.05,"t_d1":21,"t_tot":22,"rampeo":3.32,"turnp":9.1,"turnd":5.0,"learn":10.49,"cert":81.8,"sitio":"TRAINING12"},{"n":93,"ttfb":1.37,"t_d1":87,"t_tot":93,"rampeo":4.41,"turnp":16.1,"turnd":12.0,"learn":10.43,"cert":68.8,"sitio":"TRAINING13"},{"n":6,"ttfb":2.0,"t_d1":0,"t_tot":6,"rampeo":4.8,"turnp":33.3,"turnd":8.5,"learn":1.5,"cert":83.3,"sitio":"TRAINING14"},{"n":3,"ttfb":1.0,"t_d1":3,"t_tot":3,"rampeo":null,"turnp":0.0,"turnd":null,"learn":16.56,"cert":0.0,"sitio":"TRAINING16"}],"tot":{"n":1192,"ttfb":1.32,"t_d1":952,"t_tot":1125,"rampeo":5.1,"turnp":26.3,"turnd":11.8,"learn":7.21,"cert":66.5}},"W14":{"rows":[{"n":1,"ttfb":7.0,"t_d1":0,"t_tot":1,"rampeo":5.03,"turnp":0.0,"turnd":null,"learn":null,"cert":100.0,"sitio":"TRAINING01"},{"n":326,"ttfb":1.09,"t_d1":316,"t_tot":325,"rampeo":3.23,"turnp":21.2,"turnd":9.2,"learn":4.28,"cert":71.8,"sitio":"TRAINING02"},{"n":82,"ttfb":4.4,"t_d1":12,"t_tot":20,"rampeo":2.73,"turnp":11.0,"turnd":9.2,"learn":7.83,"cert":14.6,"sitio":"TRAINING03"},{"n":60,"ttfb":1.0,"t_d1":60,"t_tot":60,"rampeo":4.28,"turnp":20.0,"turnd":9.7,"learn":3.51,"cert":86.7,"sitio":"TRAINING04"},{"n":44,"ttfb":1.05,"t_d1":43,"t_tot":44,"rampeo":5.35,"turnp":31.8,"turnd":9.1,"learn":5.26,"cert":36.4,"sitio":"TRAINING05"},{"n":122,"ttfb":1.06,"t_d1":120,"t_tot":122,"rampeo":2.5,"turnp":17.2,"turnd":9.4,"learn":2.89,"cert":86.1,"sitio":"TRAINING06"},{"n":180,"ttfb":1.13,"t_d1":158,"t_tot":179,"rampeo":5.46,"turnp":15.6,"turnd":8.9,"learn":7.14,"cert":76.1,"sitio":"TRAINING07"},{"n":27,"ttfb":1.0,"t_d1":27,"t_tot":27,"rampeo":5.05,"turnp":7.4,"turnd":9.5,"learn":5.05,"cert":92.6,"sitio":"TRAINING08"},{"n":1,"ttfb":null,"t_d1":0,"t_tot":0,"rampeo":null,"turnp":0.0,"turnd":null,"learn":0.0,"cert":0.0,"sitio":"TRAINING09"},{"n":75,"ttfb":1.0,"t_d1":75,"t_tot":75,"rampeo":3.24,"turnp":16.0,"turnd":9.7,"learn":2.87,"cert":88.0,"sitio":"TRAINING10"},{"n":68,"ttfb":1.0,"t_d1":68,"t_tot":68,"rampeo":3.31,"turnp":26.5,"turnd":10.6,"learn":3.61,"cert":75.0,"sitio":"TRAINING11"},{"n":100,"ttfb":1.02,"t_d1":98,"t_tot":100,"rampeo":3.13,"turnp":18.0,"turnd":9.3,"learn":3.61,"cert":85.0,"sitio":"TRAINING13"},{"n":3,"ttfb":1.0,"t_d1":3,"t_tot":3,"rampeo":null,"turnp":0.0,"turnd":null,"learn":10.92,"cert":0.0,"sitio":"TRAINING16"},{"n":6,"ttfb":6.0,"t_d1":0,"t_tot":6,"rampeo":5.48,"turnp":16.7,"turnd":12.0,"learn":5.07,"cert":50.0,"sitio":"TRAINING17"}],"tot":{"n":1095,"ttfb":1.16,"t_d1":980,"t_tot":1030,"rampeo":3.69,"turnp":18.6,"turnd":9.4,"learn":5.43,"cert":71.9}},"W15":{"rows":[{"n":1,"ttfb":2.0,"t_d1":0,"t_tot":1,"rampeo":1.0,"turnp":0.0,"turnd":null,"learn":null,"cert":100.0,"sitio":"TRAINING01"},{"n":87,"ttfb":1.0,"t_d1":86,"t_tot":86,"rampeo":2.27,"turnp":0.0,"turnd":null,"learn":2.29,"cert":65.5,"sitio":"TRAINING02"},{"n":162,"ttfb":1.62,"t_d1":63,"t_tot":114,"rampeo":2.95,"turnp":4.9,"turnd":8.2,"learn":3.62,"cert":28.4,"sitio":"TRAINING03"},{"n":62,"ttfb":1.0,"t_d1":62,"t_tot":62,"rampeo":2.68,"turnp":1.6,"turnd":8.0,"learn":2.99,"cert":59.7,"sitio":"TRAINING04"},{"n":38,"ttfb":1.03,"t_d1":36,"t_tot":37,"rampeo":3.52,"turnp":0.0,"turnd":null,"learn":3.21,"cert":26.3,"sitio":"TRAINING05"},{"n":116,"ttfb":1.1,"t_d1":108,"t_tot":116,"rampeo":2.64,"turnp":0.9,"turnd":2.0,"learn":3.02,"cert":57.8,"sitio":"TRAINING06"},{"n":91,"ttfb":1.08,"t_d1":84,"t_tot":91,"rampeo":1.89,"turnp":3.3,"turnd":3.7,"learn":3.08,"cert":51.6,"sitio":"TRAINING07"},{"n":12,"ttfb":null,"t_d1":0,"t_tot":0,"rampeo":null,"turnp":8.3,"turnd":7.0,"learn":3.66,"cert":0.0,"sitio":"TRAINING08"},{"n":5,"ttfb":2.2,"t_d1":0,"t_tot":5,"rampeo":1.91,"turnp":0.0,"turnd":null,"learn":null,"cert":100.0,"sitio":"TRAINING09"},{"n":38,"ttfb":1.11,"t_d1":34,"t_tot":38,"rampeo":3.05,"turnp":5.3,"turnd":7.0,"learn":3.21,"cert":65.8,"sitio":"TRAINING10"},{"n":91,"ttfb":1.0,"t_d1":91,"t_tot":91,"rampeo":2.84,"turnp":7.7,"turnd":8.3,"learn":3.24,"cert":50.5,"sitio":"TRAINING11"},{"n":20,"ttfb":1.0,"t_d1":20,"t_tot":20,"rampeo":1.52,"turnp":15.0,"turnd":3.3,"learn":1.2,"cert":95.0,"sitio":"TRAINING12"},{"n":141,"ttfb":1.13,"t_d1":132,"t_tot":141,"rampeo":3.6,"turnp":1.4,"turnd":3.5,"learn":3.98,"cert":45.4,"sitio":"TRAINING13"}],"tot":{"n":864,"ttfb":1.15,"t_d1":716,"t_tot":802,"rampeo":2.69,"turnp":3.2,"turnd":6.5,"learn":3.35,"cert":49.1}},"W16":{"rows":[{"n":8,"ttfb":1.0,"t_d1":8,"t_tot":8,"rampeo":null,"turnp":0.0,"turnd":null,"learn":0.91,"cert":0.0,"sitio":"TRAINING02"},{"n":28,"ttfb":1.11,"t_d1":17,"t_tot":19,"rampeo":1.32,"turnp":0.0,"turnd":null,"learn":0.83,"cert":7.1,"sitio":"TRAINING03"},{"n":25,"ttfb":1.0,"t_d1":25,"t_tot":25,"rampeo":0.99,"turnp":0.0,"turnd":null,"learn":0.98,"cert":12.0,"sitio":"TRAINING04"},{"n":35,"ttfb":1.0,"t_d1":34,"t_tot":34,"rampeo":0.52,"turnp":0.0,"turnd":null,"learn":0.92,"cert":8.6,"sitio":"TRAINING06"},{"n":105,"ttfb":1.0,"t_d1":62,"t_tot":62,"rampeo":1.34,"turnp":0.0,"turnd":null,"learn":0.45,"cert":15.2,"sitio":"TRAINING07"},{"n":4,"ttfb":null,"t_d1":0,"t_tot":0,"rampeo":null,"turnp":0.0,"turnd":null,"learn":0.0,"cert":0.0,"sitio":"TRAINING08"},{"n":11,"ttfb":2.0,"t_d1":0,"t_tot":8,"rampeo":null,"turnp":0.0,"turnd":null,"learn":0.82,"cert":0.0,"sitio":"TRAINING09"},{"n":56,"ttfb":1.0,"t_d1":56,"t_tot":56,"rampeo":1.53,"turnp":0.0,"turnd":null,"learn":1.23,"cert":21.4,"sitio":"TRAINING10"},{"n":58,"ttfb":1.0,"t_d1":55,"t_tot":55,"rampeo":1.5,"turnp":0.0,"turnd":null,"learn":0.73,"cert":6.9,"sitio":"TRAINING11"},{"n":33,"ttfb":1.0,"t_d1":33,"t_tot":33,"rampeo":0.42,"turnp":0.0,"turnd":null,"learn":0.98,"cert":6.1,"sitio":"TRAINING13"},{"n":6,"ttfb":1.0,"t_d1":6,"t_tot":6,"rampeo":null,"turnp":0.0,"turnd":null,"learn":0.34,"cert":0.0,"sitio":"TRAINING15"},{"n":3,"ttfb":1.0,"t_d1":3,"t_tot":3,"rampeo":null,"turnp":0.0,"turnd":null,"learn":0.43,"cert":0.0,"sitio":"TRAINING16"}],"tot":{"n":372,"ttfb":1.03,"t_d1":299,"t_tot":309,"rampeo":1.28,"turnp":0.0,"turnd":null,"learn":0.78,"cert":11.3}}}};
+const allSites=["TRAINING01","TRAINING02","TRAINING03","TRAINING04","TRAINING05","TRAINING06","TRAINING07","TRAINING08","TRAINING09","TRAINING10","TRAINING11","TRAINING12","TRAINING13","TRAINING14","TRAINING15","TRAINING16","TRAINING17"];
+function band(v,g,a,low){ if(v==null) return ""; if(low){return v<=g?"g":v<=a?"a":"r";} return v>=g?"g":v>=a?"a":"r"; }
+const BG={g:"var(--g-bg)",a:"var(--a-bg)",r:"var(--r-bg)"}, TX={g:"var(--g-tx)",a:"var(--a-tx)",r:"var(--r-tx)"};
+const cols=[
+ {k:"ingresos",lbl:"INGRESOS",get:r=>r.n,fmt:v=>v.toLocaleString(),cls:"n"},
+ {k:"ttfb",lbl:"TTFB",get:r=>r.ttfb,fmt:v=>Math.round(v),color:v=>band(v,1.2,2,true)},
+ {k:"ttfbpct",lbl:"% TTFB",get:r=>r.t_tot>0?r.t_d1/r.t_tot*100:null,fmt:v=>v.toFixed(1)+"%",frac:r=>r.t_d1+"/"+r.t_tot,color:v=>band(v,90,70,false)},
+ {k:"rampeo",lbl:"DÍAS RAMPEO",get:r=>r.rampeo,fmt:v=>Math.round(v),color:v=>band(v,5,6,true)},
+ {k:"turnp",lbl:"% TURNOVER",get:r=>r.turnp,fmt:v=>v.toFixed(1)+"%",color:v=>band(v,15,25,true)},
+ {k:"turnd",lbl:"DÍAS TURN",get:r=>r.turnd,fmt:v=>v.toFixed(1),color:v=>v==null?"":(v<8?"r":v<=12?"a":"g")},
+ {k:"learn",lbl:"DÍAS LEARN",get:r=>r.learn,fmt:v=>Math.round(v),color:v=>band(v,5,7,true)},
+ {k:"cert",lbl:"% CERTIF",get:r=>r.cert,fmt:v=>v.toFixed(1)+"%",color:v=>band(v,80,60,false)}
+];
+const last4=["W13","W14","W15","W16"];
+const indCols=cols.filter(c=>c.k!=="ingresos");
+function rowOf(wk,sitio){ const b=D.data[wk]; return b?(b.rows.find(r=>r.sitio===sitio)||null):null; }
+function renderBars(){
+  const ind=indCols.find(c=>c.k===indSel.value)||indCols[0];
+  const sites=(whSel.value!=="ALL")?[whSel.value]:allSites;
+  const isPct=["ttfbpct","turnp","cert"].includes(ind.k);
+  let maxV=0;
+  const data=sites.map(s=>{ const vals=last4.map(w=>{ const r=rowOf(w,s); const v=r?ind.get(r):null; if(v!=null&&!isNaN(v)&&v>maxV)maxV=v; return v; }); return {s,vals}; });
+  const yMax=isPct?100:(maxV>0?maxV*1.12:1);
+  const H=220, top=12, bot=28, left=36, single=sites.length===1;
+  const gw=single?180:58, bw=single?30:11, bgap=single?9:2;
+  const W=left+sites.length*gw+12, plot=H-top-bot;
+  const ticks=isPct?[0,25,50,75,100]:[0,yMax/2,yMax];
+  let grid='';
+  ticks.forEach(t=>{ const y=top+(1-t/yMax)*plot; grid+='<line x1="'+left+'" y1="'+y.toFixed(1)+'" x2="'+W+'" y2="'+y.toFixed(1)+'" stroke="var(--line)"/><text x="'+(left-5)+'" y="'+(y+3).toFixed(1)+'" text-anchor="end" font-size="9" fill="var(--ink3)">'+(isPct?Math.round(t)+'%':(t>=10?Math.round(t):t.toFixed(1)))+'</text>'; });
+  let bars='';
+  data.forEach((d,i)=>{ const gx=left+i*gw, off=(gw-(4*bw+3*bgap))/2;
+    d.vals.forEach((v,j)=>{ if(v==null||isNaN(v)) return; const bx=gx+off+j*(bw+bgap); const col=ind.color?ind.color(v):''; const fill=col?BG[col]:'var(--ink3)'; const bh=Math.max(1.5,(v/yMax)*plot); const by=top+plot-bh;
+      bars+='<rect x="'+bx.toFixed(1)+'" y="'+by.toFixed(1)+'" width="'+bw+'" height="'+bh.toFixed(1)+'" rx="1.5" fill="'+fill+'"><title>'+d.s.replace("TRAINING","T-")+' · '+last4[j]+': '+ind.fmt(v)+'</title></rect>'; });
+    bars+='<text x="'+(gx+gw/2).toFixed(1)+'" y="'+(top+plot+14)+'" text-anchor="middle" font-size="9.5" fill="var(--ink2)" font-weight="600">'+d.s.replace("TRAINING","T-")+'</text>'; });
+  document.getElementById("barchart").innerHTML='<svg width="'+W+'" height="'+H+'" viewBox="0 0 '+W+' '+H+'" style="display:block">'+grid+bars+'</svg>';
+  document.getElementById("barlegend").innerHTML='En cada sitio las 4 barras van en orden W13 · W14 · W15 · W16 (de izquierda a derecha). El color es el semáforo del indicador: cuatro barras rojas = foco constante; roja en una sola semana = algo puntual. Pasa el cursor sobre una barra para ver el valor.';
+}
+const whSel=document.getElementById("wh"), wkSel=document.getElementById("wk"), indSel=document.getElementById("ind");
+whSel.innerHTML='<option value="ALL">Todos</option>'+allSites.map(s=>'<option value="'+s+'">'+s.replace("TRAINING","T-")+'</option>').join('');
+wkSel.innerHTML='<option value="ALL">Todas</option>'+D.weeks.map(w=>'<option value="'+w+'">'+w+'</option>').join('');
+indSel.innerHTML=indCols.map(c=>'<option value="'+c.k+'">'+c.lbl+'</option>').join('');
+indSel.addEventListener("change",renderBars);
+function cellHTML(c,r){ const v=c.get(r); if(v==null||(typeof v==="number"&&isNaN(v))) return '<td><div class="cell"><span class="nd">·</span></div></td>';
+  if(!c.color) return '<td class="'+(c.cls||"")+'"><div class="cell">'+c.fmt(v)+(c.frac?'<span class="frac">'+c.frac(r)+'</span>':'')+'</div></td>';
+  const col=c.color(v); const st=col?'background:'+BG[col]+';color:'+TX[col]+';':'';
+  return '<td><div class="cell" style="'+st+'">'+c.fmt(v)+(c.frac?'<span class="frac">'+c.frac(r)+'</span>':'')+'</div></td>'; }
+function render(){
+  renderBars();
+  const block=D.data[wkSel.value]; let rows=block.rows;
+  if(whSel.value!=="ALL") rows=rows.filter(r=>r.sitio===whSel.value);
+  const single=whSel.value!=="ALL";
+  // cards
+  const src= single ? (rows[0]||null) : block.tot;
+  const cardDefs=[["INGRESOS",src?src.n.toLocaleString():"·"],["TTFB DÍAS",src&&src.ttfb!=null?src.ttfb.toFixed(2):"·"],["RAMP-UP",src&&src.rampeo!=null?src.rampeo.toFixed(1):"·"],["DÍAS APRENDIZAJE",src&&src.learn!=null?src.learn.toFixed(2):"·"],["% TURNOVER",src?src.turnp.toFixed(1)+"%":"·"]];
+  document.getElementById("cards").innerHTML=cardDefs.map(([l,v])=>'<div class="kc"><div class="lbl">'+l+'</div><div class="val">'+v+'</div></div>').join('');
+  // head
+  document.getElementById("head").innerHTML='<th class="l">ALMACÉN</th>'+cols.map(c=>'<th>'+c.lbl+'</th>').join('');
+  // body
+  if(rows.length===0){ document.getElementById("body").innerHTML='<tr><td colspan="9"><div class="empty">Sin ingresos para esta combinación de almacén y semana.</div></td></tr>'; document.getElementById("foot").innerHTML=''; return; }
+  document.getElementById("body").innerHTML=rows.map(r=>'<tr><td class="l"><div class="cell">'+r.sitio.replace("TRAINING","T-")+'</div></td>'+cols.map(c=>cellHTML(c,r)).join('')+'</tr>').join('');
+  // foot (solo cuando es Todos)
+  if(single){ document.getElementById("foot").innerHTML=''; }
+  else { const t=block.tot; document.getElementById("foot").innerHTML='<td class="l">NACIONAL</td>'+cols.map(c=>{ const v=c.get(t); if(v==null) return '<td><span class="nd">·</span></td>'; return '<td>'+c.fmt(v)+(c.frac?'<span class="frac" style="color:var(--ink3)">'+c.frac(t)+'</span>':'')+'</td>'; }).join(''); }
+}
+whSel.addEventListener("change",render); wkSel.addEventListener("change",render);
+render();
+</script>
+</body>
+</html>
